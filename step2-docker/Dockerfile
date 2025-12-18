@@ -11,7 +11,7 @@ COPY vote/ /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Étape 5 : exposer le port utilisé par ton app
-EXPOSE 5000
+EXPOSE 8080
 
 # Étape 6 : lancer l'application
 CMD ["python", "app.py"]

@@ -1,0 +1,23 @@
+docker network create backend 
+
+cd .\step1-docker\
+docker build -t redis:1.0 . 
+
+cd .\step2-docker\
+docker build -t python-app:1.0 . 
+cd .\step3-docker\
+docker build -t postgresql:1.0 . 
+
+cd .\step4-docker\
+docker build -t dotnet:1.0 . 
+
+cd .\step5-docker\
+docker build -t node:1.0 . 
+
+docker run -d --name redis --network backend redis:1.0
+docker run -d --name postgresql --network backend -p 5432:5432 postgresql:1.0
+docker run -d --name python-app --network backend -p 8080:8080 python-app:1.0 
+docker run -d --name node --network backend -p 8888:8888 node:1.0  
+docker run -d --name dotnet--network backend dotnet:1.0
+
+

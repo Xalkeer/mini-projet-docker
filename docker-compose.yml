@@ -1,0 +1,112 @@
+version: "3.9"
+
+services:
+  # Redis
+  redis:
+    image: redis:7
+    container_name: redis
+    restart: unless-stopped
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # PostgreSQL
+  db:
+    image: postgres:16
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql   # Au cas ou la bdd s'est mal créée
+
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Python-app : Vote
+  vote:
+    build:
+      context: ./python-app
+      dockerfile: Dockerfile
+    image: python-app-compose:1.0
+    container_name: python
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    networks:
+      - frontend
+      - backend
+    environment:
+      REDIS_HOST: redis
+      POSTGRES_HOST: db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+
+ # Node : Result 
+  result:
+    build:
+      context: ./node
+      dockerfile: Dockerfile
+    image: node-compose:1.0
+    container_name: node
+    restart: unless-stopped
+    ports:
+      - "8888:8888"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - frontend
+      - backend
+
+  # Dotnet : Worker 
+  worker:
+    build:
+      context: ./dotnet
+      dockerfile: Dockerfile
+    image: worker-compose:1.0
+    container_name: worker
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    networks:
+      - backend
+    environment:
+      REDIS_HOST: redis
+      POSTGRES_HOST: db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+
+# Création de volume 
+volumes:
+  pgdata:
+ 
+# Réseau 
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge

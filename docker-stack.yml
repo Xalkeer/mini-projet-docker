@@ -1,0 +1,104 @@
+version: "3.9"
+
+services:
+
+
+# Redis 
+  redis:
+    image: redis:7
+    networks:
+      - backend
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+# Postgres 
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      backend:
+        aliases:
+          - postgres   
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+# Python-app 
+  vote:
+    image: python-app-compose:1.0
+    networks:
+      - frontend
+      - backend
+    ports:
+      - target: 8080
+        published: 8080
+        protocol: tcp
+        mode: ingress
+    environment:
+      REDIS_HOST: redis
+      POSTGRES_HOST: postgres
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+
+# Node 
+  result:
+    image: node-compose:1.0
+    networks:
+      - frontend
+      - backend
+    ports:
+      - target: 8888
+        published: 8888
+        protocol: tcp
+        mode: ingress
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+
+# Dotnet 
+
+  worker:
+    image: worker-compose:1.0
+    networks:
+      - backend
+    environment:
+      REDIS_HOST: redis
+      POSTGRES_HOST: postgres
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+volumes:
+  pgdata:
+
+networks:
+  frontend:
+    driver: overlay
+  backend:
+    driver: overlay

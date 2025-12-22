@@ -16,7 +16,7 @@ docker build -t postgresql:1.0 ./postgresql
 
 Afin que tout fonctionne correctement, vous devrez créer un network afin que les containeurs communiquent entre eux : 
 ```
-docker network create my-network
+docker network create backend
 
 docker run -d --name redis --network backend redis:1.0 
 docker run -d --name postgresql --network backend -p 5432:5432 postgresql:1.0 docker run -d --name python-app --network backend -p 8080:8080 python-app:1.0 docker run -d --name node --network backend -p 8888:8888 node:1.0 
